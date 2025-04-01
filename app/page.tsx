@@ -10,7 +10,6 @@ const StatsCounter = dynamic(() => import("@/components/stats-counter"))
 const TrustedPartners = dynamic(() => import("@/components/trusted-partners"), {
   loading: () => <div className="py-16 bg-black" />
 })
-
 const SpecialServices = dynamic(() => import("@/components/special-services"), {
   loading: () => <section className="bg-black py-16"><div className="container mx-auto px-4">Loading services...</div></section>
 })
@@ -21,10 +20,6 @@ const FeaturedProducts = dynamic(() => import("@/components/featured-products"),
   loading: () => <div className="py-16 bg-black" />
 })
 const NewsSection = dynamic(() => import("@/components/news-section"))
-// Add this import near the top with other dynamic imports
-const TeamSlider = dynamic(() => import("@/components/about/team-slider"), {
-  loading: () => <div className="py-16 bg-black" />
-})
 import {
   getSliders,
   getCategories,
@@ -33,7 +28,7 @@ import {
   getLatestNews,
   getStoreInfo,
   getFeaturedServices,
-  getPartners,
+  getPartners
 } from "@/lib/queries"
 import { SliderDisplayProps } from "@/components/slider/slider-display"
 
@@ -47,7 +42,7 @@ export default async function Home() {
     newsData,
     storeInfo,
     services,
-    partners,
+    partners
   ] = await Promise.all([
     getSliders(),
     getCategories(),
@@ -56,12 +51,11 @@ export default async function Home() {
     getLatestNews(),
     getStoreInfo(),
     getFeaturedServices(),
-    getPartners(),
-    // Remove getProductCategories()
+    getPartners()
   ])
 
   // Format dữ liệu slider
-  const formattedSliders = sliders.map((slider: any) => ({
+  const formattedSliders = sliders.map(slider => ({
     ...slider,
     subtitle: null,
     buttonText: null,
@@ -72,20 +66,15 @@ export default async function Home() {
   }))
 
   // Format dữ liệu products
-  const formattedProducts = products.map((product: any) => ({
+  const formattedProducts = products.map(product => ({
     ...product,
     slug: product.name.toLowerCase().replace(/\s+/g, '-'),
     description: "Mô tả sản phẩm",
-    isActive: true,
-    // Thêm id vào category nếu category tồn tại
-    category: product.category ? {
-      ...product.category,
-      id: product.categoryId || 'unknown-category-id'
-    } : null
+    isActive: true
   }))
 
   // Format dữ liệu team members
-  const formattedTeam = teamData.map((member: { id: string; name: string; position: string; image?: string; bio?: string; order: number }) => ({
+  const formattedTeam = teamData.map(member => ({
     id: member.id,
     name: member.name,
     position: member.position,
@@ -94,7 +83,7 @@ export default async function Home() {
     order: member.order
   }))
 // Format dữ liệu services
-const formattedServices = services.map((service: { title?: string; description?: string; price?: number | string }) => ({
+const formattedServices = services.map(service => ({
   ...service,
   slug: service.title?.toLowerCase().replace(/\s+/g, '-') || '',
   description: service.description || 'Mô tả dịch vụ',
@@ -102,17 +91,15 @@ const formattedServices = services.map((service: { title?: string; description?:
 }))
 
   // Format dữ liệu partners
-  const formattedPartners = partners.map((partner: { id: string; name: string; logo: string; website: string; order: number }) => ({
+  const formattedPartners = partners.map(partner => ({
     id: partner.id,
     name: partner.name,
     logo: partner.logo,
     website: partner.website,
     order: partner.order
   }))
-
-
   // Format dữ liệu news
-  const formattedNews = newsData.map((news: { title: string; content?: string }) => ({
+  const formattedNews = newsData.map(news => ({
     ...news,
     slug: news.title.toLowerCase().replace(/\s+/g, '-'),
     excerpt: news.content?.substring(0, 100) + '...' || 'Mô tả tin tức',
@@ -125,20 +112,20 @@ const formattedServices = services.map((service: { title?: string; description?:
   return (
     <main className="flex min-h-screen flex-col">
       <SliderDisplay sliders={formattedSliders} />
+
       <WhyChooseUs />
+
       <SpecialServices initialServices={formattedServices} />
+
       <YouTubeSection videoId={storeInfo.youtubeVideoId} />
       <CategoryGrid categories={categories} />
-      <FeaturedProducts 
-        initialProducts={formattedProducts} 
-        categories={categories}
-      />
+      <FeaturedProducts initialProducts={formattedProducts} />
       <NewsSection initialNews={formattedNews} />
       <StatsCounter />
       <TrustedPartners initialPartners={formattedPartners} />
-      <TeamSlider teamMembers={formattedTeam} />
       <TeamMembers teamMembers={formattedTeam} />
       <PricingSection />
+
     </main>
   )
 }

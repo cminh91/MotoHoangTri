@@ -1,64 +1,5 @@
 import prisma from "./prisma"
-import {
-  Product,
-  Service,
-  Slider,
-  Category,
-  Testimonial,
-  Partner,
-  TeamMember,
-  ContactInfo,
-  StoreInfo,
-  NewsItem
-} from "../types"
-
-interface SliderResult {
-  id: string
-  title: string
-  url: string
-  link: string | null
-  isActive: boolean
-  order: number
-}
-
-interface CategoryResult {
-  id: string
-  name: string
-  slug: string
-  type: 'PRODUCT' | 'SERVICE' | 'NEWS'
-  parentId: string | null
-  description: string | null
-  imageUrl: string | null
-}
-
-interface FeaturedProduct extends Omit<Product, 'images'> {
-  images: Array<{url: string, alt?: string | null}>
-  category: {
-    name: string
-    slug: string
-  } | null
-}
-
-interface FeaturedService extends Service {
-  images: Array<{url: string, alt: string | null}>
-  category: {
-    id: string
-    name: string
-    slug: string
-  } | null
-}
-
-interface NewsResult extends Omit<NewsItem, 'images'> {
-  images: Array<{url: string, alt: string | null}>
-  categoryName: string | null
-}
-
-interface CategoryTree {
-  products: Category[]
-  services: Category[]
-  news: Category[]
-  all: Category[]
-}
+import { Product, Service } from "../types"
 
 if (!prisma) {
   throw new Error("Prisma client không được khởi tạo")
@@ -119,7 +60,6 @@ export async function getCategories() {
   }
 }
 
-
 // Fetch featured products
 export async function getFeaturedProducts() {
   try {
@@ -148,7 +88,7 @@ export async function getFeaturedProducts() {
       }
     })
     
-    return products.map((product: Product) => ({
+    return products.map((product) => ({
       ...product,
       price: product.price ? Number(product.price) : 0,
       salePrice: product.salePrice ? Number(product.salePrice) : 0,
@@ -163,6 +103,7 @@ export async function getFeaturedProducts() {
 // Fetch all categories with hierarchy
 export async function getAllCategories() {
   try {
+    console.log('Fetching all active categories from database...')
     const allCategories = await prisma.category.findMany({
       where: { isActive: true },
       orderBy: [
@@ -185,12 +126,13 @@ export async function getAllCategories() {
         }
       }
     })
+    console.log('Raw categories data:', JSON.stringify(allCategories, null, 2))
 
     // Build category tree
     const categoryMap = new Map<string, any>()
     const rootCategories: any[] = []
     
-    allCategories.forEach((category: Category) => {
+    allCategories.forEach(category => {
       const node = {
         ...category,
         children: []
@@ -256,11 +198,11 @@ export async function getFeaturedServices() {
       }
     })
 
-    return services.map((service: Service) => ({
+    return services.map((service): Service => ({
       ...service,
       title: service.title || '',
       price: service.price ? Number(service.price) : null,
-      images: service.images.map((img: { url: string, alt: string | null }) => ({
+      images: service.images.map((img) => ({
         url: img.url,
         alt: img.alt || null
       }))
@@ -298,9 +240,9 @@ export async function getLatestNews() {
       }
     })
     
-    return news.map((item: NewsItem) => ({
+    return news.map((item) => ({
       ...item,
-      images: item.images.map((img: { url: string, alt: string | null }) => img.url),
+      images: item.images.map((img: { url: string }) => img.url),
       categoryName: item.category?.name || null
     }))
   } catch (error) {
@@ -377,14 +319,7 @@ function parseSocialLinks(socialLinks: any) {
 // Fetch store info
 export async function getStoreInfo() {
   try {
-    const storeInfo = await prisma.storeInfo.findFirst({
-      select: {
-        name: true,
-        logo: true,
-        hotline: true,
-        footer: true, // Add footer field
-      }
-    });
+    const storeInfo = await prisma.storeInfo.findFirst();
     const contactInfo = await prisma.contact.findFirst();
     const socialLinks = parseSocialLinks(contactInfo?.socialLinks);
 
@@ -405,8 +340,7 @@ export async function getStoreInfo() {
       youtubeVideoId: socialLinks?.youtube
         ? socialLinks.youtube.split('v=')[1] || ""
         : "",
-      logoUrl: storeInfo?.logo || "/logo.png",
-      footer: storeInfo?.footer || "Moto Edit là nhà phân phối các thiết bị và phụ kiện xe máy chính hãng" // Add footer with default value
+      logoUrl: storeInfo?.logo || "/logo.png"
     };
   } catch (error) {
     console.error("Failed to fetch store info:", error)
@@ -420,8 +354,7 @@ export async function getStoreInfo() {
       instagramUrl: "https://instagram.com", 
       youtubeUrl: "https://youtube.com",
       youtubeVideoId: "",
-      logoUrl: "/logo.png",
-      footer: "Moto Edit là nhà phân phối các thiết bị và phụ kiện xe máy chính hãng" // Add default footer
+      logoUrl: "/logo.png"
     }
   }
 }
@@ -458,6 +391,7 @@ export async function getTeamMembers() {
 
 // Fetch contact info
 export async function getContactInfo() {
+  console.log('Fetching contact info from database...')
   try {
     const contact = await prisma.contact.findFirst({
       select: {
@@ -474,6 +408,7 @@ export async function getContactInfo() {
     })
 
     if (!contact) {
+      console.warn("Không tìm thấy thông tin liên hệ.")
       return null // Hoặc trả về giá trị mặc định
     }
 
@@ -507,10 +442,10 @@ export async function getContactInfo() {
       ...contact,
       workingHours: parsedWorkingHours,
       socialLinks: parsedSocialLinks,
-      // Thêm các trường xử lý khác nếu cần, ví dụng: định dạng giờ làm việc
+      // Thêm các trường xử lý khác nếu cần, ví dụ: định dạng giờ làm việc
       workingHoursFormatted: typeof parsedWorkingHours === 'object' && parsedWorkingHours !== null
         ? Object.entries(parsedWorkingHours).map(([day, time]) => `${day}: ${time}`).join('; ')
-        : typeof contact.workingHours === 'string' ? contact.workingHours : 'N/A', // Fallback nếu workingHours là string đơn giảm hoặc không parse được
+        : typeof contact.workingHours === 'string' ? contact.workingHours : 'N/A', // Fallback nếu workingHours là string đơn giản hoặc không parse được
       facebookUrl: parsedSocialLinks?.facebook || null,
       instagramUrl: parsedSocialLinks?.instagram || null,
       youtubeUrl: parsedSocialLinks?.youtube || null,
@@ -519,53 +454,5 @@ export async function getContactInfo() {
   } catch (error) {
     console.error("Lỗi khi lấy thông tin liên hệ:", error)
     return null // Hoặc trả về giá trị mặc định
-  }
-}
-
-// Add this function to fetch policies
-// Fetch policies
-export async function getPolicies() {
-  try {
-    const policies = await prisma.policy.findMany({
-      where: {
-        isPublished: true
-      },
-      select: {
-        id: true,
-        title: true,
-        slug: true,
-        excerpt: true,
-        order: true
-      },
-      orderBy: {
-        order: 'asc'
-      }
-    });
-    
-    return policies;
-  } catch (error) {
-    console.error("Failed to fetch policies:", error);
-    return [];
-  }
-}
-
-// Fetch analytics stats
-export async function getAnalyticsStats() {
-  try {
-    const response = await fetch('/api/analytics');
-    if (!response.ok) {
-      throw new Error('Failed to fetch analytics');
-    }
-    const data = await response.json();
-    return {
-      pageViews: data.summary?.pageViews || 0,
-      uniqueVisitors: data.summary?.uniqueVisitors || 0
-    };
-  } catch (error) {
-    console.error("Failed to fetch analytics stats:", error);
-    return {
-      pageViews: 0,
-      uniqueVisitors: 0
-    };
   }
 }
